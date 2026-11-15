@@ -56,8 +56,15 @@ type App struct {
 
 	localAPIHandler http.Handler
 	backend         *ipnlocal.LocalBackend
+	// tunBackend is the Go-side backend struct (TUN devices, router/DNS
+	// facade). Set once runBackend has created it; read after ready.Wait().
+	tunBackend *backend
 	ready           sync.WaitGroup
 	backendMu       sync.Mutex
+
+	// Magic V2Ray mode: the local WireGuard endpoint, see magicv2ray.go.
+	magicMu sync.Mutex
+	magic   *magicEndpoint
 
 	// logger is the logtail logger whose uploads follow the user's
 	// IsClientLoggingEnabled preference. Populated once runBackend wires
@@ -168,6 +175,7 @@ func (a *App) runBackend(ctx context.Context, hardwareAttestation bool) error {
 	a.logIDPublicAtomic.Store(&b.logIDPublic)
 	a.logger.Store(b.logger)
 	a.backend = b.backend
+	a.tunBackend = b
 	if hardwareAttestation {
 		a.backend.SetHardwareAttested()
 	}

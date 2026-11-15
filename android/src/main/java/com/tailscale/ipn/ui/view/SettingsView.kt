@@ -29,6 +29,8 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.tailscale.ipn.BuildConfig
 import com.tailscale.ipn.R
+import com.tailscale.ipn.UninitializedApp
+import com.tailscale.ipn.magicv2ray.MagicV2RaySettings
 import com.tailscale.ipn.mdm.AlwaysNeverUserDecides
 import com.tailscale.ipn.mdm.MDMSettings
 import com.tailscale.ipn.mdm.ShowHide
@@ -37,7 +39,9 @@ import com.tailscale.ipn.ui.components.Header
 import com.tailscale.ipn.ui.components.ListItemSwitch
 import com.tailscale.ipn.ui.components.ListItemText
 import com.tailscale.ipn.ui.dataSource.SettingsDataSource
+import com.tailscale.ipn.ui.model.Ipn
 import com.tailscale.ipn.ui.model.IpnLocal
+import com.tailscale.ipn.ui.notifier.Notifier
 import com.tailscale.ipn.ui.theme.AppTheme
 import com.tailscale.ipn.ui.theme.link
 import com.tailscale.ipn.ui.util.AndroidTVUtil.isAndroidTV
@@ -70,6 +74,7 @@ fun SettingsView(
   val isClientRemoteLoggingEnabled by
       settingsViewModel.isClientRemoteLoggingEnabled.collectAsStateWithLifecycle()
   val isVPNPrepared by appViewModel.vpnPrepared.collectAsStateWithLifecycle()
+  val isMagicV2RayMode by MagicV2RaySettings.enabled.collectAsStateWithLifecycle()
   val showTailnetLock by MDMSettings.manageTailnetLock.flow.collectAsStateWithLifecycle()
   val useTailscaleSubnets by MDMSettings.useTailscaleSubnets.flow.collectAsStateWithLifecycle()
 
@@ -87,6 +92,7 @@ fun SettingsView(
               showTailnetLock = showTailnetLock.value == ShowHide.Show,
               showSubnetRouting = useTailscaleSubnets.value == AlwaysNeverUserDecides.UserDecides,
               isClientRemoteLoggingEnabled = isClientRemoteLoggingEnabled,
+              isMagicV2RayMode = isMagicV2RayMode,
               isMDMConfigured = MDMSettings.isMDMConfigured,
               isDebugBuild = BuildConfig.DEBUG,
               appVersion = AppVersion.Short(),
@@ -94,6 +100,14 @@ fun SettingsView(
       nav = settingsNav,
       isTv = isAndroidTV(),
       toggleIsClientRemoteLoggingEnabled = settingsViewModel::toggleIsClientRemoteLoggingEnabled,
+      toggleMagicV2RayMode = { on ->
+        // The two modes use different plumbing: stop the running one before switching.
+        val app = UninitializedApp.get()
+        if (Notifier.state.value == Ipn.State.Running || Notifier.state.value == Ipn.State.Starting) {
+          app.stopVPN()
+        }
+        MagicV2RaySettings.setEnabled(on)
+      },
       showDisableLoggingDialog = { showDisableLoggingDialog = true },
       openAdmin = { handler.openUri(Links.ADMIN_URL) },
   )
@@ -155,6 +169,7 @@ private data class SettingsUIState(
     val showTailnetLock: Boolean,
     val showSubnetRouting: Boolean,
     val isClientRemoteLoggingEnabled: Boolean,
+    val isMagicV2RayMode: Boolean,
     val isMDMConfigured: Boolean,
     val isDebugBuild: Boolean,
     val appVersion: String,
@@ -166,6 +181,7 @@ private fun SettingsScreen(
     nav: SettingsNav,
     isTv: Boolean,
     toggleIsClientRemoteLoggingEnabled: () -> Unit,
+    toggleMagicV2RayMode: (Boolean) -> Unit,
     showDisableLoggingDialog: () -> Unit,
     openAdmin: () -> Unit,
 ) {
@@ -247,6 +263,14 @@ private fun SettingsScreen(
           },
       )
 
+      Lists.ItemDivider()
+      ListItemSwitch(
+          R.string.magic_v2ray_mode,
+          subtitle = stringResource(R.string.magic_v2ray_mode_subtitle),
+          isOn = state.isMagicV2RayMode,
+          onToggle = toggleMagicV2RayMode,
+      )
+
       if (!isTv) {
         Lists.ItemDivider()
         ListItemText(R.string.permissions, onClick = nav.onNavigateToPermissions)
@@ -296,6 +320,7 @@ private fun SettingsPreview() {
                 showTailnetLock = true,
                 showSubnetRouting = true,
                 isClientRemoteLoggingEnabled = true,
+                isMagicV2RayMode = false,
                 isMDMConfigured = true,
                 isDebugBuild = true,
                 appVersion = "1.104.0",
@@ -317,6 +342,7 @@ private fun SettingsPreview() {
             ),
         isTv = false,
         toggleIsClientRemoteLoggingEnabled = {},
+        toggleMagicV2RayMode = {},
         showDisableLoggingDialog = {},
         openAdmin = {},
     )

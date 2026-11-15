@@ -89,7 +89,7 @@ public class QuickToggleService extends TileService {
           app.stopVPN();
       } else {
           boolean vpnPrepared = App.get().getAppScopedViewModel().getVpnPrepared().getValue();
-          if (vpnPrepared) {
+          if (vpnPrepared || app.isMagicV2RayMode()) {
               app.startVPN();
           } else {
               launchMainActivity();

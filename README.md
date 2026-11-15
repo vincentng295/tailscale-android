@@ -184,3 +184,16 @@ https://tailscale.com/company for more about us and what we're
 building.
 
 WireGuard is a registered trademark of Jason A. Donenfeld.
+
+## Magic V2Ray working mode
+
+The **Magic V2Ray mode** switch in Settings (below Remote client logging) switches the working mode between **VpnService** (stock Tailscale) and
+**Magic V2Ray**. In Magic V2Ray mode no `VpnService` is created. `libtailscale` opens a WireGuard
+endpoint on `127.0.0.1` (random port, fresh keys on every start, see `libtailscale/magicv2ray.go`),
+builds the `wireguard://` link itself and the app hands it to Magic V2Ray together with the
+temporary overrides (no sniffing, Tailscale DNS `100.100.100.100` with `hijackDns` following MagicDNS,
+`lanProxyCidrs="100.64.0.0/10 fc00::/7"` (space separated), and `replace` routing: tailnet ranges `100.64.0.0/10,fd7a:115c:a1e0::/48`
+to `proxy`, everything else `direct`, or `proxy` when an exit node is enabled). There is no
+link to enter. Magic V2Ray asks you to confirm the connection; it can only be started from a
+visible Activity, so a start triggered from the quick tile or an automation intent connects the
+next time the app is in the foreground.

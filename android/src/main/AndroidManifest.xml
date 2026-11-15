@@ -16,6 +16,14 @@
         android:name="android.permission.QUERY_ALL_PACKAGES"
         tools:ignore="QueryAllPackagesPermission" />
 
+    <!-- Android 11+ package visibility: lets us see and start Magic V2Ray (Magic V2Ray mode). -->
+    <queries>
+        <package android:name="com.huskydg.magicv2ray" />
+        <intent>
+            <action android:name="com.huskydg.magicv2ray.action.CONNECT" />
+        </intent>
+    </queries>
+
     <!-- Disable input emulation on ChromeOS -->
     <uses-feature
         android:name="android.hardware.type.pc"

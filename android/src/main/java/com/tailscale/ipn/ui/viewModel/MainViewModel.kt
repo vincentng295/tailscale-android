@@ -17,6 +17,7 @@ import androidx.lifecycle.viewModelScope
 import com.tailscale.ipn.App
 import com.tailscale.ipn.R
 import com.tailscale.ipn.mdm.MDMSettings
+import com.tailscale.ipn.magicv2ray.MagicV2RayController
 import com.tailscale.ipn.ui.model.Favorites
 import com.tailscale.ipn.ui.model.Ipn.State
 import com.tailscale.ipn.ui.model.Tailcfg
@@ -164,7 +165,9 @@ class MainViewModel(private val appViewModel: AppViewModel) : IpnViewModel() {
     viewModelScope.launch {
       var previousState: State? = null
       combine(Notifier.state, isVpnActive) { state, active -> state to active }
-          .collect { (currentState, active) ->
+          .collect { (currentState, vpnActive) ->
+            // No VpnService in Magic V2Ray mode: the tunnel is "active" whenever Tailscale runs.
+            val active = vpnActive || MagicV2RayController.isMagicMode()
             // Determine the correct state resource string
             stateRes.set(userStringRes(currentState, previousState, active))
             // Determine if the VPN toggle should be on
@@ -241,10 +244,16 @@ class MainViewModel(private val appViewModel: AppViewModel) : IpnViewModel() {
   }
 
   fun maybeRequestVpnPermission() {
+    // Magic V2Ray mode does not use VpnService, so there is no system VPN consent to ask for.
+    if (MagicV2RayController.isMagicMode()) return
     _requestVpnPermission.value = true
   }
 
   fun showVPNPermissionLauncherIfUnauthorized() {
+    if (MagicV2RayController.isMagicMode()) {
+      _requestVpnPermission.value = false
+      return
+    }
     val vpnIntent = VpnService.prepare(App.get())
     TSLog.d("VpnPermissions", "vpnIntent=$vpnIntent")
     if (vpnIntent != null) {
@@ -270,11 +279,18 @@ class MainViewModel(private val appViewModel: AppViewModel) : IpnViewModel() {
         if (desiredState) {
           // User wants to turn ON the VPN
           when {
-            currentState != State.Running -> showVPNPermissionLauncherIfUnauthorized()
+            currentState != State.Running -> {
+              if (MagicV2RayController.isMagicMode()) {
+                // No VpnService: App.startVPN routes to MagicV2RayController.
+                startVPN()
+              } else {
+                showVPNPermissionLauncherIfUnauthorized()
+              }
+            }
           }
         } else {
           // User wants to turn OFF the VPN
-          if (currentState == State.Running) {
+          if (currentState == State.Running || MagicV2RayController.isMagicMode()) {
             stopVPN()
           }
         }

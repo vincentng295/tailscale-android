@@ -40,7 +40,7 @@ class AutomationActivity : Activity() {
    */
   private fun connect() {
     val app = UninitializedApp.get()
-    if (app.isAbleToStartVPN() && VpnService.prepare(this) == null) {
+    if (app.isAbleToStartVPN() && (app.isMagicV2RayMode() || VpnService.prepare(this) == null)) {
       app.startVPN()
     } else {
       launchMainActivity()

@@ -413,4 +413,9 @@
     <string name="shortcut_disconnect_short">Disconnect</string>
     <string name="shortcut_disconnect_long">Disconnect from Tailscale</string>
 
+    <!-- Magic V2Ray mode -->
+    <string name="magic_v2ray">Magic V2Ray</string>
+    <string name="magic_v2ray_mode">Magic V2Ray mode</string>
+    <string name="magic_v2ray_mode_subtitle">Use Magic V2Ray instead of VpnService</string>
+    <string name="magic_v2ray_not_installed">Magic V2Ray is not installed</string>
 </resources>

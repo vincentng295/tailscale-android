@@ -146,6 +146,20 @@ type Application interface {
 	// on every new ipn.Notify message. The returned NotificationManager
 	// allows the watcher to stop watching notifications.
 	WatchNotifications(mask int, cb NotificationCallback) NotificationManager
+
+	// StartMagicV2RayEndpoint starts a local WireGuard endpoint on 127.0.0.1
+	// (random port, fresh keys) that feeds the Tailscale engine, and returns
+	// the wireguard:// link to pass to Magic V2Ray. Idempotent while running.
+	// Fails if Tailscale has no tailnet address yet. See magicv2ray.go.
+	StartMagicV2RayEndpoint() (string, error)
+
+	// StopMagicV2RayEndpoint tears the local WireGuard endpoint down.
+	StopMagicV2RayEndpoint()
+
+	// MagicV2RayEndpointInfoJSON describes the running endpoint as JSON
+	// {host, port, secretKey, publicKey, addresses, mtu, name, uri}, or
+	// returns "" when it is not running.
+	MagicV2RayEndpointInfoJSON() string
 }
 
 // FileParts is an array of multiple FileParts.

@@ -82,6 +82,7 @@ import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.lifecycle.repeatOnLifecycle
 import com.tailscale.ipn.App
 import com.tailscale.ipn.R
+import com.tailscale.ipn.magicv2ray.MagicV2RaySettings
 import com.tailscale.ipn.mdm.MDMSettings
 import com.tailscale.ipn.mdm.ShowHide
 import com.tailscale.ipn.ui.Links
@@ -149,6 +150,7 @@ fun MainView(
         val user by viewModel.loggedInUser.collectAsState()
         val stateVal by viewModel.stateRes.collectAsState(initial = R.string.placeholder)
         val stateStr = stringResource(id = stateVal)
+        val magicV2RayConnected by MagicV2RaySettings.sessionConnected.collectAsState()
         val netmap by viewModel.netmap.collectAsState()
         val showExitNodePicker by MDMSettings.exitNodesPicker.flow.collectAsState()
         val disableToggle by MDMSettings.forceEnabled.flow.collectAsState()
@@ -183,6 +185,15 @@ fun MainView(
               if (!hideHeader) {
                 Row(verticalAlignment = Alignment.CenterVertically) {
                   Text(text = stateStr, style = MaterialTheme.typography.bodyMedium.short)
+                  if (magicV2RayConnected) {
+                    val green = androidx.compose.ui.graphics.Color(0xFF00E676)
+                    Text(text = " • ", style = MaterialTheme.typography.bodyMedium.short, color = green)
+                    Text(
+                        text = stringResource(R.string.magic_v2ray),
+                        style = MaterialTheme.typography.bodyMedium.short,
+                        color = green,
+                    )
+                  }
                   healthIcon?.let {
                     Spacer(modifier = Modifier.size(4.dp))
                     IconButton(

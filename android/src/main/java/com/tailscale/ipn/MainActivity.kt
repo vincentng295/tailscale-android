@@ -19,6 +19,7 @@ import android.net.Uri
 import android.os.Build
 import android.os.Bundle
 import android.os.Process
+import android.widget.Toast
 import android.provider.Settings
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
@@ -49,7 +50,9 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
 import androidx.core.net.toUri
 import androidx.core.splashscreen.SplashScreen.Companion.installSplashScreen
+import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.ViewModelProvider
+import androidx.lifecycle.repeatOnLifecycle
 import androidx.lifecycle.lifecycleScope
 import androidx.navigation.NavHostController
 import androidx.navigation.compose.NavHost
@@ -69,6 +72,8 @@ import com.tailscale.ipn.ui.dataSource.TailnetLockSetupDataSourceImpl
 import com.tailscale.ipn.ui.model.Ipn
 import com.tailscale.ipn.ui.navigation.AboutRoute
 import com.tailscale.ipn.ui.navigation.BugReportRoute
+import com.tailscale.ipn.magicv2ray.MagicV2Ray
+import com.tailscale.ipn.magicv2ray.MagicV2RaySettings
 import com.tailscale.ipn.ui.navigation.DNSSettingsRoute
 import com.tailscale.ipn.ui.navigation.ExitNodesRoute
 import com.tailscale.ipn.ui.navigation.HealthRoute
@@ -568,6 +573,33 @@ class MainActivity : ComponentActivity() {
     }
     // Once we see a loginFinished event, clear the QR code which will dismiss the QR dialog.
     lifecycleScope.launch { Notifier.loginFinished.collect { _ -> loginQRCode.set(null) } }
+    // Magic V2Ray mode: Magic V2Ray can only be started from a foreground Activity, so
+    // MagicV2RayController leaves its requests in MagicV2RaySettings.pending and we act on them
+    // while visible (also when the request was made while the app was in the background).
+    lifecycleScope.launch {
+      repeatOnLifecycle(Lifecycle.State.STARTED) {
+        MagicV2RaySettings.pending.collect { request ->
+          when (request) {
+            null -> {}
+            is MagicV2RaySettings.Pending.Connect -> {
+              MagicV2RaySettings.consume(request)
+              if (!MagicV2Ray.connect(this@MainActivity, request.uri, request.overridesJson)) {
+                Toast.makeText(
+                        this@MainActivity,
+                        R.string.magic_v2ray_not_installed,
+                        Toast.LENGTH_LONG,
+                    )
+                    .show()
+              }
+            }
+            MagicV2RaySettings.Pending.Disconnect -> {
+              MagicV2RaySettings.consume(request)
+              MagicV2Ray.disconnect(this@MainActivity)
+            }
+          }
+        }
+      }
+    }
   }
 
   private fun showOtherVPNConflictDialog() {

@@ -45,6 +45,7 @@ import kotlinx.serialization.Serializable
 
 @Serializable data object PermissionsRoute
 
+
 @Serializable data object TaildropDirRoute
 
 @Serializable data object NotificationsRoute

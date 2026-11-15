@@ -45,8 +45,25 @@ open class IPNService : VpnService(), libtailscale.IPNService {
     }
   }
 
-  override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int =
+  override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
+    // Magic V2Ray mode: this service is only a foreground notification holder. Never register
+    // as the VPN with the Go backend, Magic V2Ray owns the system VPN slot.
+    if (UninitializedApp.get().isMagicV2RayMode()) {
       when (intent?.action) {
+        ACTION_STOP_VPN,
+        ACTION_RESTART_VPN,
+        ACTION_START_FOREGROUND_ONLY -> {} // handled below
+        ACTION_START_VPN -> {
+          showForegroundNotification()
+          return START_NOT_STICKY
+        }
+        else -> {
+          stopSelf()
+          return START_NOT_STICKY
+        }
+      }
+    }
+    return when (intent?.action) {
         ACTION_STOP_VPN -> {
           app.setWantRunning(false)
           close()
@@ -100,6 +117,7 @@ open class IPNService : VpnService(), libtailscale.IPNService {
           }
         }
       }
+  }
 
   override fun close() {
     if (closed) return

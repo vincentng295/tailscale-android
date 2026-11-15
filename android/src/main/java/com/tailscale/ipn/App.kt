@@ -2,6 +2,7 @@
 // SPDX-License-Identifier: BSD-3-Clause
 package com.tailscale.ipn
 
+import com.tailscale.ipn.magicv2ray.MagicV2RayController
 import android.Manifest
 import android.app.Application
 import android.app.Notification
@@ -563,6 +564,9 @@ open class UninitializedApp : Application() {
     // the VPN (i.e. we're logged in and machine is authorized).
     private const val ABLE_TO_START_VPN_KEY = "ableToStartVPN"
 
+    // Working mode: true = Magic V2Ray (no VpnService), false = VpnService.
+    private const val MAGIC_V2RAY_MODE_KEY = "magicV2RayMode"
+
     // The value is 'disallowedApps' as it used to represent
     // only disallowed applications. This has been changed
     // and allowing/disallowing is based on ALLOW_SELECTED_APPS_KEY
@@ -610,6 +614,15 @@ open class UninitializedApp : Application() {
     return getUnencryptedPrefs().getBoolean(ABLE_TO_START_VPN_KEY, false)
   }
 
+  /** True when the working mode is Magic V2Ray. Callable without initializing the App. */
+  fun isMagicV2RayMode(): Boolean {
+    return getUnencryptedPrefs().getBoolean(MAGIC_V2RAY_MODE_KEY, false)
+  }
+
+  fun setMagicV2RayMode(enabled: Boolean) {
+    getUnencryptedPrefs().edit().putBoolean(MAGIC_V2RAY_MODE_KEY, enabled).apply()
+  }
+
   private fun getUnencryptedPrefs(): SharedPreferences {
     return getSharedPreferences(UNENCRYPTED_PREFERENCES, MODE_PRIVATE)
   }
@@ -632,6 +645,10 @@ open class UninitializedApp : Application() {
   }
 
   fun startVPN() {
+    if (isMagicV2RayMode()) {
+      MagicV2RayController.start()
+      return
+    }
     val intent = Intent(this, IPNService::class.java).apply { action = IPNService.ACTION_START_VPN }
     // FLAG_UPDATE_CURRENT ensures that if the intent is already pending, the existing intent will
     // be updated rather than creating multiple redundant instances.
@@ -658,6 +675,7 @@ open class UninitializedApp : Application() {
   }
 
   fun stopVPN() {
+    if (isMagicV2RayMode()) MagicV2RayController.stop()
     val intent = Intent(this, IPNService::class.java).apply { action = IPNService.ACTION_STOP_VPN }
     try {
       startService(intent)
@@ -669,6 +687,8 @@ open class UninitializedApp : Application() {
   }
 
   fun restartVPN() {
+    // Nothing to rebuild in Magic V2Ray mode: there is no VpnService configuration.
+    if (isMagicV2RayMode()) return
     val intent =
         Intent(this, IPNService::class.java).apply { action = IPNService.ACTION_RESTART_VPN }
     try {
