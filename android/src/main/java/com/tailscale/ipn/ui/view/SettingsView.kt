@@ -7,6 +7,9 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
+import android.widget.Toast
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
@@ -16,8 +19,10 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalUriHandler
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.SpanStyle
@@ -52,6 +57,10 @@ import com.tailscale.ipn.ui.viewModel.MainViewModel
 import com.tailscale.ipn.ui.viewModel.SettingsNav
 import com.tailscale.ipn.ui.viewModel.SettingsViewModel
 import com.tailscale.ipn.ui.viewModel.SettingsViewModelFactory
+import com.tailscale.ipn.util.AppLogExporter
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import kotlin.Boolean
 
 @Composable
@@ -79,6 +88,24 @@ fun SettingsView(
   val useTailscaleSubnets by MDMSettings.useTailscaleSubnets.flow.collectAsStateWithLifecycle()
 
   var showDisableLoggingDialog by remember { mutableStateOf(false) }
+
+  val context = LocalContext.current
+  val scope = rememberCoroutineScope()
+  val exportLogsLauncher =
+      rememberLauncherForActivityResult(ActivityResultContracts.CreateDocument("text/plain")) { uri
+        ->
+        if (uri != null) {
+          scope.launch {
+            val ok = withContext(Dispatchers.IO) { AppLogExporter.write(context, uri) }
+            Toast.makeText(
+                    context,
+                    if (ok) R.string.export_app_logs_done else R.string.export_app_logs_failed,
+                    Toast.LENGTH_LONG,
+                )
+                .show()
+          }
+        }
+      }
 
   SettingsScreen(
       state =
@@ -110,6 +137,7 @@ fun SettingsView(
       },
       showDisableLoggingDialog = { showDisableLoggingDialog = true },
       openAdmin = { handler.openUri(Links.ADMIN_URL) },
+      exportAppLogs = { exportLogsLauncher.launch(AppLogExporter.defaultFileName()) },
   )
 
   if (showDisableLoggingDialog) {
@@ -184,6 +212,7 @@ private fun SettingsScreen(
     toggleMagicV2RayMode: (Boolean) -> Unit,
     showDisableLoggingDialog: () -> Unit,
     openAdmin: () -> Unit,
+    exportAppLogs: () -> Unit,
 ) {
   Scaffold(
       topBar = {
@@ -289,6 +318,13 @@ private fun SettingsScreen(
 
       Lists.ItemDivider()
       ListItemText(
+          R.string.export_app_logs,
+          subtitle = stringResource(R.string.export_app_logs_subtitle),
+          onClick = exportAppLogs,
+      )
+
+      Lists.ItemDivider()
+      ListItemText(
           R.string.about_tailscale,
           subtitle = "${stringResource(id = R.string.version)} ${state.appVersion}",
           onClick = nav.onNavigateToAbout,
@@ -345,6 +381,7 @@ private fun SettingsPreview() {
         toggleMagicV2RayMode = {},
         showDisableLoggingDialog = {},
         openAdmin = {},
+        exportAppLogs = {},
     )
   }
 }

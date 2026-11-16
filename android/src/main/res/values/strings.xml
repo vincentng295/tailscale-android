@@ -418,4 +418,8 @@
     <string name="magic_v2ray_mode">Magic V2Ray mode</string>
     <string name="magic_v2ray_mode_subtitle">Use Magic V2Ray instead of VpnService</string>
     <string name="magic_v2ray_not_installed">Magic V2Ray is not installed</string>
+    <string name="export_app_logs">Export app logs</string>
+    <string name="export_app_logs_subtitle">Save this app\'s log to a file (secrets are masked)</string>
+    <string name="export_app_logs_done">Logs exported</string>
+    <string name="export_app_logs_failed">Could not export logs</string>
 </resources>
