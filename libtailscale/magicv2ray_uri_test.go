@@ -88,3 +88,17 @@ func TestListenPortFromIPC(t *testing.T) {
 		t.Fatal("expected error")
 	}
 }
+
+func TestWGEndpointIPC(t *testing.T) {
+	var pub [32]byte
+	for i := range pub {
+		pub[i] = byte(i)
+	}
+	got := wgEndpointIPC(pub, "127.0.0.1:49948")
+	want := "public_key=000102030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f\n" +
+		"update_only=true\n" +
+		"endpoint=127.0.0.1:49948\n"
+	if got != want {
+		t.Fatalf("wgEndpointIPC =\n%q\nwant\n%q", got, want)
+	}
+}

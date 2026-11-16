@@ -76,6 +76,18 @@ func wgIPCConfig(ours wgKeyPair, peerPub [32]byte) string {
 	return sb.String()
 }
 
+// wgEndpointIPC returns the wireguard-go UAPI snippet that sets the endpoint of
+// the existing peer peerPub (update_only: it never creates a peer). The fork of
+// wireguard-go we use does not learn endpoints from incoming packets, so the
+// endpoint of Magic V2Ray (its loopback source address) is set explicitly.
+func wgEndpointIPC(peerPub [32]byte, endpoint string) string {
+	var sb strings.Builder
+	sb.WriteString("public_key=" + hex.EncodeToString(peerPub[:]) + "\n")
+	sb.WriteString("update_only=true\n")
+	sb.WriteString("endpoint=" + endpoint + "\n")
+	return sb.String()
+}
+
 // magicEndpointInfo describes the running local WireGuard endpoint. It is what
 // MagicV2RayEndpointInfoJSON returns to Kotlin.
 type magicEndpointInfo struct {

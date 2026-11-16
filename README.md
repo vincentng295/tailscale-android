@@ -197,3 +197,8 @@ to `proxy`, everything else `direct`, or `proxy` when an exit node is enabled). 
 link to enter. Magic V2Ray asks you to confirm the connection; it can only be started from a
 visible Activity, so a start triggered from the quick tile or an automation intent connects the
 next time the app is in the foreground.
+
+Tailscale's wireguard-go fork does not learn a peer's endpoint from incoming packets, so the local
+endpoint wraps its UDP bind (`libtailscale/magicv2ray_bind.go`): it accepts loopback senders only
+and sets Magic V2Ray's source address as the peer endpoint. Without that the handshake fails with
+`no known endpoint for peer`.

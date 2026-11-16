@@ -129,12 +129,21 @@ func (a *App) newMagicEndpoint(addrs []string) (_ *magicEndpoint, err error) {
 		done:     make(chan struct{}),
 	}
 
-	// NOTE: conn.NewDefaultBind listens on the wildcard address. That is safe
-	// (a WireGuard device drops everything that does not carry a valid MAC for
-	// our public key) but it is reachable from the LAN. A loopback-only conn.Bind
-	// would remove that exposure; it is deliberately not included here because the
-	// conn.Bind interface of the tailscale/wireguard-go fork could not be checked.
-	ep.dev = device.NewDevice(ep.chWG.TUN(), conn.NewDefaultBind(), device.NewLogger(device.LogLevelError, "magicv2ray-wg: "))
+	// conn.NewDefaultBind listens on the wildcard address, so it is wrapped below to
+	// accept loopback senders only.
+	// The stock bind is wrapped: it drops non-loopback senders and tells us
+	// Magic V2Ray's source address, which becomes the peer's endpoint (the fork
+	// does not learn endpoints by itself, see learnBind). Magic V2Ray retries the
+	// handshake every few seconds, so if the very first answer races the
+	// endpoint update, the next attempt completes it.
+	bind := newLearnBind(conn.NewDefaultBind(), func(addr string) {
+		if err := ep.dev.IpcSet(wgEndpointIPC(magic.pub, addr)); err != nil {
+			log.Printf("magicv2ray: set peer endpoint %s: %v", addr, err)
+			return
+		}
+		log.Printf("magicv2ray: peer endpoint %s", addr)
+	})
+	ep.dev = device.NewDevice(ep.chWG.TUN(), bind, device.NewLogger(device.LogLevelError, "magicv2ray-wg: "))
 	defer func() {
 		if err != nil {
 			ep.dev.Close()
